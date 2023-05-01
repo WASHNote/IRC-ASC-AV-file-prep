@@ -90,7 +90,7 @@ all_files <- latest_files %>%
   ) %>%
   left_join(
     content %>%
-      select(airtable_record_id, Event, `Content author`) %>%
+      select(airtable_record_id, Event, `Content author`, `Video`) %>%
       filter(lengths(Event)>0, lengths(`Content author`)>0) %>%
       mutate(
         event_id = unlist(Event),
@@ -141,9 +141,15 @@ lapply(paths, function(x) {
   dir.create(x, recursive = TRUE)
 })
 
+vids <- character(0)
 for (i in 1:nrow(all_files)) {
   x <- all_files[i,]
   x_file <- "::::"
+  if (!is.na(x$Video)&x$Video==TRUE) {
+    is_video = TRUE
+  } else (
+    is_video <- FALSE
+  )
   attachments <- x$Attachments
   lapply(attachments, function(y) {
     for (j in 1:nrow(y)) {
@@ -152,6 +158,7 @@ for (i in 1:nrow(all_files)) {
           x_file <- paste0(y[j,]$filename,".pptx")
         } else if (y[j,]$type=="video/mp4") {
           x_file <- paste0(y[j,]$filename,".mp4")
+          if (!is_video) warning(x$path, "/", x_file, " IS NOT LISTED AS VIDEO.")
         } else{
           cat(y[j,]$filename,"\n")
           cat(y[j,]$type,"\n")
@@ -162,7 +169,12 @@ for (i in 1:nrow(all_files)) {
       }
       cat(y[j,]$filename,"in: \n")
       cat(x$path,"\n\n")
-      httr::GET(y[j,]$url, httr::write_disk(paste0(x$path, "/", x_file), overwrite=TRUE))
+      if (is_video) {
+        x_file <- paste0("VIDEO_", x_file)
+        vids[length(vids)] <<- paste0(x$path, "/", x_file)
+        warning("Video: ", paste0(x$path, "/", x_file))
+      }
+      #httr::GET(y[j,]$url, httr::write_disk(paste0(x$path, "/", x_file), overwrite=TRUE))
     }
   })
 }
